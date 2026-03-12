@@ -38,6 +38,10 @@ export default function App() {
   const [undoRedoToast, setUndoRedoToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Track whether the editor should auto-focus after entry switch
+  // true = user was in editing flow (Enter/Ctrl+Enter), false = user clicked sidebar / arrow keys
+  const shouldAutoFocusEditor = useRef(false);
+
   const filteredOrder = useFilteredEntries(
     state?.entries || {},
     state?.order || [],
@@ -46,12 +50,17 @@ export default function App() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Skip when focus is in an input/select (e.g. sidebar search, filter dropdowns)
+      const active = document.activeElement;
+      const isInInput = active instanceof HTMLInputElement || active instanceof HTMLSelectElement;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         if (state?.history.past.length) {
           const lastAction = state.history.past[state.history.past.length - 1];
           const affectedIndex = state.order.indexOf(lastAction.entryId);
           if (affectedIndex !== -1) {
+            shouldAutoFocusEditor.current = false;
             setCurrentIndex(affectedIndex);
           }
           undo();
@@ -64,6 +73,7 @@ export default function App() {
           const nextAction = state.history.future[0];
           const affectedIndex = state.order.indexOf(nextAction.entryId);
           if (affectedIndex !== -1) {
+            shouldAutoFocusEditor.current = false;
             setCurrentIndex(affectedIndex);
           }
           redo();
@@ -74,7 +84,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleGlobalKeyDown, { capture: true });
-  }, [state?.history, state?.order, undo, redo, setCurrentIndex]);
+  }, [state?.history, state?.order, state?.currentIndex, filteredOrder, undo, redo, setCurrentIndex]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">正在加载工作区...</div>;
@@ -145,6 +155,7 @@ export default function App() {
   const currentEntry = state.entries[currentEntryId];
 
   const jumpToNext = () => {
+    shouldAutoFocusEditor.current = true;
     const currentFilteredIndex = filteredOrder.indexOf(currentEntryId);
     if (currentFilteredIndex >= 0) {
       for (let i = currentFilteredIndex + 1; i < filteredOrder.length; i++) {
@@ -251,10 +262,10 @@ export default function App() {
           style={{ width: isSidebarOpen ? '20rem' : '0' }}
         >
           <div className="w-80 h-full">
-            <Sidebar 
-              state={state} 
-              onSelect={setCurrentIndex} 
-              onFilterChange={setFilters} 
+            <Sidebar
+              state={state}
+              onSelect={(idx: number) => { shouldAutoFocusEditor.current = false; setCurrentIndex(idx); }}
+              onFilterChange={setFilters}
             />
           </div>
         </div>
@@ -384,9 +395,9 @@ export default function App() {
                 
                 <div className="flex-1 min-h-0">
                   <EditorArea
-                    key={currentEntryId}
                     entry={currentEntry}
                     placeholders={state.placeholders}
+                    autoFocus={shouldAutoFocusEditor.current}
                     onChange={(val) => updateEntry(currentEntryId, { Chinese_Mod: val })}
                     onConfirm={handleConfirm}
                     onNext={jumpToNext}

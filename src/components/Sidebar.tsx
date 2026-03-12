@@ -58,7 +58,7 @@ export function Sidebar({ state, onSelect, onFilterChange }: Props) {
   useEffect(() => {
     const currentFilteredIndex = filteredOrder.indexOf(order[currentIndex]);
     if (currentFilteredIndex >= 0 && virtuosoRef.current) {
-      virtuosoRef.current.scrollToIndex({ index: currentFilteredIndex, align: 'center' });
+      virtuosoRef.current.scrollToIndex({ index: currentFilteredIndex });
     }
   }, [currentIndex, filteredOrder, order]);
 

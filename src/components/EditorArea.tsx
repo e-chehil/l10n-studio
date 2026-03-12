@@ -4,16 +4,16 @@ import { splitByPlaceholders } from '../utils';
 import debounce from 'lodash.debounce';
 
 interface Props {
-  key?: string;
   entry: Entry;
   placeholders: string[];
+  autoFocus?: boolean;
   onChange: (value: string) => void;
   onConfirm: (value: string) => void;
   onNext: () => void;
   onFlag: () => void;
 }
 
-export function EditorArea({ entry, placeholders, onChange, onConfirm, onNext, onFlag }: Props) {
+export function EditorArea({ entry, placeholders, autoFocus, onChange, onConfirm, onNext, onFlag }: Props) {
   const [value, setValue] = useState(entry.Chinese_Mod);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -46,25 +46,14 @@ export function EditorArea({ entry, placeholders, onChange, onConfirm, onNext, o
     }
   }, [entry.Chinese_Mod]);
 
+  // Only auto-focus when explicitly requested (continuous editing flow)
   useLayoutEffect(() => {
-    if (textareaRef.current) {
-      // Only grab focus if it's not currently in another interactive element (e.g. sidebar search)
-      const active = document.activeElement;
-      const isInOtherInput = active instanceof HTMLInputElement || active instanceof HTMLSelectElement;
-      if (!isInOtherInput) {
-        textareaRef.current.focus();
-      }
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
       const length = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(length, length);
     }
-  }, [entry.Key]);
-
-  // Restore focus after mount only if no other element has focus
-  useEffect(() => {
-    if (textareaRef.current && document.activeElement === document.body) {
-      textareaRef.current.focus();
-    }
-  }, []);
+  }, [entry.Key, autoFocus]);
 
   // Sync scroll between textarea and overlay
   const handleScroll = () => {
