@@ -49,7 +49,7 @@ export function useAppStore() {
   const loadDefaultCSV = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/sample.csv');
+      const res = await fetch('./sample.csv');
       if (!res.ok) {
         throw new Error('Default CSV not found');
       }
