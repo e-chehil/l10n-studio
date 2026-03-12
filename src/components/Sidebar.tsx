@@ -170,18 +170,24 @@ export function Sidebar({ state, onSelect, onFilterChange }: Props) {
         />
       </div>
 
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 overflow-hidden outline-none"
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
-        <Virtuoso
-          ref={virtuosoRef}
-          style={{ height: '100%' }}
-          totalCount={filteredOrder.length}
-          itemContent={renderItem}
-        />
+        {filteredOrder.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-sm text-gray-400 px-4 text-center">
+            没有符合当前过滤条件的词条
+          </div>
+        ) : (
+          <Virtuoso
+            ref={virtuosoRef}
+            style={{ height: '100%' }}
+            totalCount={filteredOrder.length}
+            itemContent={renderItem}
+          />
+        )}
       </div>
     </div>
   );

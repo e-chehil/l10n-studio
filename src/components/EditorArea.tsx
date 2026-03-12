@@ -48,15 +48,18 @@ export function EditorArea({ entry, placeholders, onChange, onConfirm, onNext, o
 
   useLayoutEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.focus();
+      // Only grab focus if it's not currently in another interactive element (e.g. sidebar search)
+      const active = document.activeElement;
+      const isInOtherInput = active instanceof HTMLInputElement || active instanceof HTMLSelectElement;
+      if (!isInOtherInput) {
+        textareaRef.current.focus();
+      }
       const length = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(length, length);
     }
-  }, [entry.Key]); // 依然监听当前词条的变化
+  }, [entry.Key]);
 
-  // Restore focus if the user was typing and pressed Enter/Ctrl+Enter
-  // When the component unmounts, focus goes to document.body.
-  // If we mount and focus is on body, it means we should grab it back.
+  // Restore focus after mount only if no other element has focus
   useEffect(() => {
     if (textareaRef.current && document.activeElement === document.body) {
       textareaRef.current.focus();

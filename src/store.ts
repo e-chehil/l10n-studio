@@ -20,7 +20,7 @@ type PersistedAppState = Omit<AppState, 'history'>;
 const defaultState: AppState = {
   entries: {},
   order: [],
-  placeholders: ['<LINE>', '{0}', '%1$s', '<color=red>', '</color>'],
+  placeholders: ['re:<[^>]+>|%(?:\\d+|\\.?\\d*[a-zA-Z])'],
   currentIndex: 0,
   filters: {
     file: '',

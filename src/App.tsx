@@ -270,12 +270,7 @@ export default function App() {
             {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </button>
 
-          {filteredOrder.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              没有符合当前过滤条件的词条。
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden max-w-6xl mx-auto w-full gap-4">
+          <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden max-w-6xl mx-auto w-full gap-4">
               
               {/* Info Area */}
               <div className="shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex justify-between items-center">
@@ -401,7 +396,6 @@ export default function App() {
               </div>
 
             </div>
-          )}
 
           {/* Validation Warning Modal */}
           {validationWarning && (

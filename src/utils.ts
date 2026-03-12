@@ -17,20 +17,63 @@ function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const REGEX_PREFIX = 're:';
+
+function isRegexPlaceholder(p: string): boolean {
+  return p.startsWith(REGEX_PREFIX);
+}
+
+function getRegexSource(p: string): string {
+  return p.slice(REGEX_PREFIX.length);
+}
+
 // Cache for compiled regex patterns
 const regexCache = new Map<string, RegExp>();
 
-function getPlaceholderRegex(placeholders: string[], withCapture: boolean = false): RegExp {
-  const sorted = [...placeholders].sort((a, b) => b.length - a.length);
-  const key = sorted.join('|') + (withCapture ? ':capture' : '');
-
-  if (!regexCache.has(key)) {
-    const pattern = sorted.map(escapeRegExp).join('|');
-    const regex = new RegExp(withCapture ? `(${pattern})` : pattern, 'g');
-    regexCache.set(key, regex);
+function buildPlaceholderRegex(placeholders: string[], withCapture: boolean): RegExp {
+  const cacheKey = placeholders.join('\x00') + (withCapture ? '\x01' : '');
+  const cached = regexCache.get(cacheKey);
+  if (cached) {
+    cached.lastIndex = 0;
+    return cached;
   }
 
-  return regexCache.get(key)!;
+  // Split into literal strings and regex patterns
+  const literals: string[] = [];
+  const regexPatterns: string[] = [];
+
+  for (const p of placeholders) {
+    if (isRegexPlaceholder(p)) {
+      regexPatterns.push(getRegexSource(p));
+    } else {
+      literals.push(p);
+    }
+  }
+
+  // Sort literals by length descending so longer matches win
+  literals.sort((a, b) => b.length - a.length);
+
+  const parts: string[] = [
+    ...regexPatterns,
+    ...literals.map(escapeRegExp),
+  ];
+
+  if (parts.length === 0) return /(?!)/g; // match nothing
+
+  const combined = parts.join('|');
+  const regex = new RegExp(withCapture ? `(${combined})` : combined, 'g');
+  regexCache.set(cacheKey, regex);
+  return regex;
+}
+
+/** Validate a regex string. Returns error message or null if valid. */
+export function validateRegex(pattern: string): string | null {
+  try {
+    new RegExp(pattern);
+    return null;
+  } catch (e) {
+    return (e as Error).message;
+  }
 }
 
 export function parseCSV(file: File): Promise<{ entries: Record<string, Entry>, order: string[] }> {
@@ -87,7 +130,8 @@ export async function exportToZip(entries: Record<string, Entry>, order: string[
 
 export function countPlaceholders(text: string, placeholders: string[]): number {
   if (!text || placeholders.length === 0) return 0;
-  const regex = getPlaceholderRegex(placeholders, false);
+  const regex = buildPlaceholderRegex(placeholders, false);
+  regex.lastIndex = 0;
   const matches = text.match(regex);
   return matches ? matches.length : 0;
 }
@@ -96,11 +140,19 @@ export function splitByPlaceholders(text: string, placeholders: string[]): { tex
   if (!text) return [];
   if (placeholders.length === 0) return [{ text, isPlaceholder: false }];
 
-  const regex = getPlaceholderRegex(placeholders, true);
+  const regex = buildPlaceholderRegex(placeholders, true);
+  regex.lastIndex = 0;
   const parts = text.split(regex);
 
-  return parts.filter(part => part !== '').map(part => ({
-    text: part,
-    isPlaceholder: placeholders.includes(part),
-  }));
+  // Build a test regex to check if a fragment is a placeholder match
+  const testRegex = buildPlaceholderRegex(placeholders, false);
+
+  return parts.filter(part => part !== '').map(part => {
+    testRegex.lastIndex = 0;
+    const fullMatch = testRegex.exec(part);
+    return {
+      text: part,
+      isPlaceholder: fullMatch !== null && fullMatch[0] === part,
+    };
+  });
 }
